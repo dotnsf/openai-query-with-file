@@ -80,8 +80,42 @@
 </style>
 <script>
 var busy_lib = null;
+$(function(){
+  busy_lib = getBusyOverlay( document.body,
+    {color:'black', opacity:0.5, text:'loading',style:'text-decoration:blink;font-weight:bold;font-size:12px;color:white'},
+    {color:'#fff',size:128, type:'o'}
+  );
+
+  $.ajax({
+    type: 'GET',
+    url: '/api/models',
+    success: function( result ){
+      console.log( {result} );
+      if( typeof result == 'string' ) result = JSON.parse( result );
+      if( result && result.status && result.result ){
+        $('#models').append( '<option value="">（LLM を選択）</option>' );
+        for( var i = 0; i < result.result.length; i ++ ){
+          var model = result.result[i];
+          if( model.object == 'model' /* && model.owned_by == 'openai' */ ){
+            $('#models').append( '<option value="' + model.id + '">' + model.id + '</option>' );
+          }
+        }
+      }
+
+      busy_lib.remove();
+      busy_lib = null;
+    },
+    error: function( e ){
+      console.log( {e} );
+      busy_lib.remove();
+      busy_lib = null;
+    }
+  });
+});
+
 function api(){
   var text = $("#tweet").val();
+  var model = $("#models").val();
   var $file = $('#file');
 
   //console.log({text});
@@ -95,6 +129,7 @@ function api(){
 
     var data = new FormData();
     data.append( 'prompt', text );
+    data.append( 'model', model );
     if( $file.prop( 'files' ) && $file.prop( 'files' )[0] ){
       //. ファイルが指定されていたら送信データに加える
       data.append( 'file', $file.prop( 'files' )[0] );
@@ -250,6 +285,7 @@ function voiceOutput( text, lang ){
     <!-- 右寄 -->
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
+        <select id="models" class="form-control"></select>
       </li>
     </ul>
   </div>
@@ -290,7 +326,7 @@ function voiceOutput( text, lang ){
       </div>
       <div class="media-body">
         <div class="alert alert-info">
-          ようこそ　チャットボットへ
+          質問・指示を入力してください。ファイルを添付する場合はそのファイルに関する質問・指示を入力できます。
         </div>
       </div>
     </div>
