@@ -55,12 +55,12 @@ paths:
           description: 成功
         '400':
           description: エラー
-  /excel:
+  /file:
     post:
       tags:
         - openai
-      summary: Analyse with Excel file
-      description: Analyse with Excel file
+      summary: Analyse with file
+      description: Analyse with file
       consumes:
         - multipart/form-data
       produces:
@@ -73,8 +73,7 @@ paths:
         - name: file
           in: formData
           type: file
-          description: xlsx ファイル
-          required: true
+          description: ファイル(.xls, .xlsx, .csv, .tsv)
         - name: model
           in: formData
           type: string
@@ -87,35 +86,67 @@ paths:
           description: エラー
         '429':
           description: Too many requests
-  /csv:
-    post:
-      tags:
-        - openai
-      summary: Analyse with CSV file
-      description: Analyse with CSV file
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - name: prompt
-          in: formData
-          type: string
-          description: 指示プロンプト
-        - name: file
-          in: formData
-          type: file
-          description: csv ファイル
-          required: true
-        - name: model
-          in: formData
-          type: string
-          enum: [ "gpt-3.5-turbo", "gpt-4o-mini", "gpt-4" ]
-          description: モデルID
-      responses:
-        '200':
-          description: 成功
-        '400':
-          description: エラー
-        '429':
-          description: Too many requests
+#  /excel:
+#    post:
+#      tags:
+#        - openai
+#      summary: Analyse with Excel file
+#      description: Analyse with Excel file
+#      consumes:
+#        - multipart/form-data
+#      produces:
+#        - application/json
+#      parameters:
+#        - name: prompt
+#          in: formData
+#          type: string
+#          description: 指示プロンプト
+#        - name: file
+#          in: formData
+#          type: file
+#          description: xlsx ファイル
+#          required: true
+#        - name: model
+#          in: formData
+#          type: string
+#          enum: [ "gpt-3.5-turbo", "gpt-4o-mini", "gpt-4" ]
+#          description: モデルID
+#      responses:
+#        '200':
+#          description: 成功
+#        '400':
+#          description: エラー
+#        '429':
+#          description: Too many requests
+#  /csv:
+#    post:
+#      tags:
+#        - openai
+#      summary: Analyse with CSV file
+#      description: Analyse with CSV file
+#      consumes:
+#        - multipart/form-data
+#      produces:
+#        - application/json
+#      parameters:
+#        - name: prompt
+#          in: formData
+#          type: string
+#          description: 指示プロンプト
+#        - name: file
+#          in: formData
+#          type: file
+#          description: csv ファイル
+#          required: true
+#        - name: model
+#          in: formData
+#          type: string
+#          enum: [ "gpt-3.5-turbo", "gpt-4o-mini", "gpt-4" ]
+#          description: モデルID
+#      responses:
+#        '200':
+#          description: 成功
+#        '400':
+#          description: エラー
+#        '429':
+#          description: Too many requests

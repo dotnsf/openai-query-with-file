@@ -62,7 +62,7 @@ app.get( '/api/ping', function( req, res ){
 });
 
 var settings_apikey = 'API_KEY' in process.env ? process.env.API_KEY : '';
-var settings_organization = 'ORGANIZATION' in process.env ? process.env.ORGANIZATION : '';
+///var settings_organization = 'ORGANIZATION' in process.env ? process.env.ORGANIZATION : '';
 var openai = new OpenAI( { apiKey: settings_apikey } );
 
 app.get( '/api/models', async function( req, res ){
@@ -86,6 +86,117 @@ app.get( '/api/model/:id', async function( req, res ){
 var DEFAULT_ROLE = 'DEFAULT_ROLE' in process.env && process.env.DEFAULT_ROLE ? process.env.DEFAULT_ROLE : 'user';
 var DEFAULT_PROMPT = 'DEFAULT_PROMPT' in process.env && process.env.DEFAULT_PROMPT ? process.env.DEFAULT_PROMPT : '';
 var DEFAULT_MODEL = 'DEFAULT_MODEL' in process.env && process.env.DEFAULT_MODEL ? process.env.DEFAULT_MODEL : 'gpt-4o-mini';
+
+app.post( '/api/file', async function( req, res ){
+  res.contentType( 'application/json; charset=utf8' );
+
+  var role = req.body.role ? req.body.role : DEFAULT_ROLE;
+  var prompt = req.body.prompt ? req.body.prompt : DEFAULT_PROMPT;
+  var model = req.body.model ? req.body.model : DEFAULT_MODEL;
+  var file_text = '';
+
+  if( req.file && req.file.path ){
+    var path = req.file.path;
+    var filename = req.file.originalname;
+    var mimetype = req.file.mimetype;
+  
+    var tmp = filename.split( '.' );
+    var ext = tmp[tmp.length-1].toLowerCase();
+    switch( ext ){
+    case 'xls':
+    case 'xlsx':
+      var book = XLSX.readFile( path );
+  
+      //. sheets = { Sheet1: {}, Sheet2: {}, .. }
+      var sheets = book.Sheets;
+      Object.keys( sheets ).forEach( function( sheetname ){
+        var sheet_text = '';
+        var sheet = sheets[sheetname]
+        var cells = [];
+
+        var range = sheet["!ref"];
+        var decodeRange = Utils.decode_range( range );  //. { s: { c:0, r:0 }, e: { c:5, r:4 } }
+
+        //. シート内の全セル値を取り出し
+        for( var r = decodeRange['s']['r']; r <= decodeRange['e']['r']; r ++ ){
+          var row = [];
+
+          for( var c = decodeRange['s']['c']; c <= decodeRange['e']['c']; c ++ ){
+            var address = Utils.encode_cell( { r: r, c: c } );
+            var cell = sheet[address];
+            if( typeof cell !== "undefined" ){
+              if( typeof cell.v != "undefined" ){
+                row.push( cell.v );
+              }else{
+                row.push( '' );
+              }
+            }else{
+              row.push( '' );
+            }
+          }
+          cells.push( row );
+        }
+
+        if( cells && cells.length ){
+          for( var r = 0; r < cells.length; r ++ ){
+            for( var c = 0; c < cells[r].length; c ++ ){
+              var cell = cells[r][c]
+              var str_cell = '' + cell;
+
+              sheet_text += ' ' + str_cell;
+            }
+            sheet_text += '\r\n';
+          }
+
+          file_text += sheet_text;
+        }
+      });
+
+      break;
+    case 'csv':
+    case 'tsv':
+      //. ファイル読み込み（Shift_JIS ファイルは変換する）
+      var buffer = fs.readFileSync( path );
+      var file_text = buffer.toString();
+      var detect = encoding.detect( buffer );
+      if( detect != 'UTF8' ){
+        file_text = encoding.convert( buffer, { from: detect, to: 'UNICODE', type: 'string' } );
+      }
+
+      break;
+    default:
+    }
+
+    fs.unlinkSync( path );
+  }
+
+
+  var text = prompt;
+  if( file_text ){
+    text += '\r\n\r\n' + file_text;
+  }
+  var option = {
+    model: model,
+    messages: [{
+      role: role,
+      content: [
+        { type: 'text', text: text }
+      ]
+    }]
+  };
+  var completion = await progressingCompletion( option );
+
+  //console.log( {completion} );
+  if( completion && completion.status ){
+    res.write( JSON.stringify( completion, null, 2 ) );
+    res.end();
+  }else{
+    res.status( 400 );
+    res.write( JSON.stringify( { status: false, error: 'no completion returned.' }, null, 2 ) );
+    res.end();
+  }
+});
+
 app.post( '/api/excel', async function( req, res ){
   res.contentType( 'application/json; charset=utf8' );
   if( req.file && req.file.path ){
