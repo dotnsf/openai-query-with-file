@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+<title>OpenAI Chat(with File)</title>
+<meta charset="utf8"/>
+<meta http-equiv="pragma" content="no-cache"/>
+<script src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.1/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.5.1/js/bootstrap.min.js"></script>
+<link href="//use.fontawesome.com/releases/v5.15.4/css/all.css" rel="stylesheet"/>
+<script src="//enforcedata.dol.gov/views/js/busy/cvi_busy_lib.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+.bg-defuser {
+    width: 3em;
+    height: 3em;
+}
+
+.send-area {
+    background-color: white;
+    padding-bottom: 0.5em;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 127;
+}
+.main-board {
+    position: absolute;
+    top: 128px;
+    z-index: 64;
+}
+
+.tweet {
+    animation-name: ani1;
+    animation-duration: 1.3s;
+    animation-timing-function: ease;
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards; /*終了後も維持*/
+    opacity: 0;
+    /*ブラウザ別設定*/
+    -moz-animation-duration: 1.3s;
+    -moz-animation-name: ani1;
+    -webkit-animation-duration: 1.3s;
+    -webkit-animation-name: ani1;
+}
+/*キーフレーム設定*/
+@keyframes ani1 {
+    0% {
+        opacity: 0;
+    }
+    1% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+@-moz-keyframes ani1 {
+    0% {
+        opacity: 0;
+    }
+    1% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+@-webkit-keyframes ani1 {
+    0% {
+        opacity: 0;
+    }
+    1% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+</style>
+<script>
+var busy_lib = null;
+function api(){
+  var text = $("#tweet").val();
+  var $file = $('#file');
+
+  //console.log({text});
+  if( text || ( $file.prop( 'files' ) && $file.prop( 'files' )[0] ) ){
+    $('#tweet').val( '' );
+
+    busy_lib = getBusyOverlay( document.body,
+      {color:'black', opacity:0.5, text:'loading',style:'text-decoration:blink;font-weight:bold;font-size:12px;color:white'},
+      {color:'#fff',size:128, type:'o'}
+    );
+
+    var data = new FormData();
+    data.append( 'prompt', text );
+    if( $file.prop( 'files' ) && $file.prop( 'files' )[0] ){
+      //. ファイルが指定されていたら送信データに加える
+      data.append( 'file', $file.prop( 'files' )[0] );
+    }
+    //console.log( {data} );
+  
+    $.ajax({
+      type: 'POST',
+      url: '/api/file',
+      data: data,
+      cache: false,
+      contentType: false,
+      processData: false,
+      success: function( result ){
+        console.log( {result} );
+        if( typeof result == 'string' ) result = JSON.parse( result );
+        if( result && result.status && result.result && result.result.choices ){
+          var result_text = result.result.choices[0].message.content;
+          result_text = result_text.split( "\n" ).join( "<br/>" );
+          var div = document.createElement("div");
+          div.innerHTML = '' +
+            ' <div class="col-1">' +
+            ' </div>' +
+            ' <div class="col-1">' +
+            ' <i class="fas fa-robot fa-3x"></i>' +
+            ' </div>' +
+            ' <div class="col-9">' +
+            ' <div class="alert alert-info" style="width:90%">' +
+            result_text +
+            ' </div>' +
+            ' </div>' +  
+            ' <div class="col-1">' +
+            ' <!-- margin:padding -->' +
+            ' </div>';
+          div.setAttribute("class", "row");
+          document.getElementById("field").appendChild(div);
+  
+          //voiceOutput( result1.text );
+        }
+        busy_lib.remove();
+        busy_lib = null;
+      },
+      error: function( e1 ){
+        console.log( {e1} );
+        busy_lib.remove();
+        busy_lib = null;
+      }
+    });
+  }
+}
+
+function submitMessage(){
+  var text = $("#tweet").val();
+  
+  var div = document.createElement("div");
+  div.innerHTML = '' +
+  '      <div class="col-1">' +
+  '        <!-- margin:padding -->' +
+  '      </div>' +
+  '      <div class="col-10 media tweet">' +
+  '        <div class="media-body">' +
+  '          <div class="alert alert-success">' +
+  document.getElementById("tweet").value +
+  '          </div>' +
+  '        </div>' +
+  '        <div class="media-right">' +
+  '        <i class="fas fa-user fa-3x"></i>' +
+  '        </div>' +
+  '      </div>' +
+  '      <div class="col-1">' +
+  '        <!-- margin:padding -->' +
+  '      </div>';
+  div.setAttribute("class", "row");
+  document.getElementById("field").appendChild(div);
+
+  /*強制スクロール*/
+  var h = window.parent.screen.height;
+  scrollTo(0, h);
+
+  /*APIで呼び出す相手の返事*/
+  window.setTimeout( api, 800 );
+}
+
+//. 音声入力
+var flag_speech = 0;
+function voiceInput(){
+  window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+  var recognition = new SpeechRecognition(); //webkitSpeechRecognition();
+  recognition.lang = 'ja';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+
+  recognition.onsoundstart = function(){
+    console.log( '認識中' );
+  };
+  recognition.onnomatch = function(){
+    console.log( 'もう一度試してください' );
+  };
+  recognition.onerror = function(){
+    console.log( 'エラー' );
+  };
+  recognition.onsoundend = function(){
+    console.log( '停止中' );
+    //voiceInput();  //. 認識後も音声入力を続ける場合
+  };
+
+  recognition.onresult = function( event ){
+    var results = event.results;
+    for( var i = event.resultIndex; i < results.length; i++ ){
+      if( results[i].isFinal ){
+        var text = results[i][0].transcript;
+        $('#tweet').val( text );
+        //voiceInput();  //. 認識後も音声入力を続ける場合
+        recognition.stop();
+      }else{
+        $('#tweet').val( results[i][0].transcript );
+        flag_speech = 1;
+      }
+    }
+  }
+
+  flag_speech = 0;
+  console.log( "start" );
+  recognition.start();
+}
+
+//. 音声出力
+function voiceOutput( text, lang ){
+  if( 'speechSynthesis' in window ){
+    var voices = window.speechSynthesis.getVoices();
+    if( !lang ){ lang = 'ja-JP'; }
+
+    uttr = new SpeechSynthesisUtterance();
+    uttr.text = text;
+    uttr.lang = lang;
+
+    window.speechSynthesis.speak( uttr );
+    uttr.onend = speechEnd;
+  }else{
+    alert( 'このブラウザは Web Speech API に未対応です。')
+  }
+}
+</script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="#">OpenAI Chat(with File)</a>
+    <ul class="navbar-nav mr-auto">
+    </ul>
+
+    <!-- 右寄 -->
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+      </li>
+    </ul>
+  </div>
+</nav>
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-2">
+    <!-- margin:padding -->
+    </div>
+    <div class="col-8 input-group mb-3">
+      <div class="input-group-prepend">
+        <button onClick="voiceInput();" id="voice_btn" type="button" class="btn btn-outline-secondary"><i class="fas fa-microphone"></i></button>
+      </div>
+      <input id="tweet" type="text" class="form-control" placeholder="入力テキスト" value="今日はいい天気ですね"/>
+      <input id="file" type="file" class="form-control"/>
+      <div class="input-group-append">
+        <button onClick="submitMessage();" id="send_btn" type="button" class="btn btn-primary">送信</button>
+      </div>
+    </div>
+    <div class="col-2">
+    <!-- margin:padding -->
+    </div>
+  </div>
+</div>
+
+<!-- main board -->
+<div class="container main-board" style="font-size: 1.25em;" id="field">
+  <!-- dummy B :: other board -->
+  <div class="row" >
+    <div class="col-1">
+      <!-- margin:padding -->
+    </div>
+    <div class="col-10 media">
+      <div class="media-left">
+        <i class="fas fa-robot fa-3x"></i>
+      </div>
+      <div class="media-body">
+        <div class="alert alert-info">
+          ようこそ　チャットボットへ
+        </div>
+      </div>
+    </div>
+    <div class="col-1">
+    <!-- margin:padding -->
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
