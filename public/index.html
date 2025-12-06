@@ -97,7 +97,11 @@ $(function(){
         for( var i = 0; i < result.result.length; i ++ ){
           var model = result.result[i];
           if( model.object == 'model' /* && model.owned_by == 'openai' */ ){
-            $('#models').append( '<option value="' + model.id + '">' + model.id + '</option>' );
+            if( model.id == 'gpt-4o-mini' ){
+              $('#models').append( '<option value="' + model.id + '" selected>' + model.id + '</option>' );
+            }else{
+              $('#models').append( '<option value="' + model.id + '">' + model.id + '</option>' );
+            }
           }
         }
       }
