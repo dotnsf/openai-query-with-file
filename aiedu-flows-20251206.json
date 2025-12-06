@@ -1,0 +1,219 @@
+[
+    {
+        "id": "4b38c7258b013aa3",
+        "type": "tab",
+        "label": "AI発展演習２",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "3bebfd69f3402d55",
+        "type": "http in",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "url": "/aiedu",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 100,
+        "y": 60,
+        "wires": [
+            [
+                "9c8fcc0ef8282367"
+            ]
+        ]
+    },
+    {
+        "id": "9c8fcc0ef8282367",
+        "type": "template",
+        "z": "4b38c7258b013aa3",
+        "name": "HTML",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "html",
+        "syntax": "plain",
+        "template": "<!DOCTYPE html>\n<html lang=\"jp\">\n<head>\n<title>OpenAI Chat(with File)</title>\n<meta charset=\"utf8\"/>\n<meta http-equiv=\"pragma\" content=\"no-cache\"/>\n<script src=\"//code.jquery.com/jquery-2.2.4.min.js\"></script>\n<link href=\"//maxcdn.bootstrapcdn.com/bootstrap/4.5.1/css/bootstrap.min.css\" rel=\"stylesheet\"/>\n<script src=\"//maxcdn.bootstrapcdn.com/bootstrap/4.5.1/js/bootstrap.min.js\"></script>\n<link href=\"//use.fontawesome.com/releases/v5.15.4/css/all.css\" rel=\"stylesheet\"/>\n<script src=\"//enforcedata.dol.gov/views/js/busy/cvi_busy_lib.js\"></script>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>\n<style>\n.bg-defuser {\n    width: 3em;\n    height: 3em;\n}\n\n.send-area {\n    background-color: white;\n    padding-bottom: 0.5em;\n    position: fixed;\n    top: 0px;\n    width: 100%;\n    z-index: 127;\n}\n.main-board {\n    position: absolute;\n    top: 128px;\n    z-index: 64;\n}\n\n.tweet {\n    animation-name: ani1;\n    animation-duration: 1.3s;\n    animation-timing-function: ease;\n    animation-iteration-count: 1;\n    animation-fill-mode: forwards; /*終了後も維持*/\n    opacity: 0;\n    /*ブラウザ別設定*/\n    -moz-animation-duration: 1.3s;\n    -moz-animation-name: ani1;\n    -webkit-animation-duration: 1.3s;\n    -webkit-animation-name: ani1;\n}\n/*キーフレーム設定*/\n@keyframes ani1 {\n    0% {\n        opacity: 0;\n    }\n    1% {\n        opacity: 0;\n    }\n    100% {\n        opacity: 1;\n    }\n}\n@-moz-keyframes ani1 {\n    0% {\n        opacity: 0;\n    }\n    1% {\n        opacity: 0;\n    }\n    100% {\n        opacity: 1;\n    }\n}\n@-webkit-keyframes ani1 {\n    0% {\n        opacity: 0;\n    }\n    1% {\n        opacity: 0;\n    }\n    100% {\n        opacity: 1;\n    }\n}\n</style>\n<script>\nvar busy_lib = null;\n$(function(){\n  busy_lib = getBusyOverlay( document.body,\n    {color:'black', opacity:0.5, text:'loading',style:'text-decoration:blink;font-weight:bold;font-size:12px;color:white'},\n    {color:'#fff',size:128, type:'o'}\n  );\n\n  $.ajax({\n    type: 'GET',\n    url: '/aiedu_models',\n    success: function( result ){\n      console.log( {result} );\n      if( typeof result == 'string' ) result = JSON.parse( result );\n      if( result && result.status && result.result ){\n        $('#models').append( '<option value=\"\">（LLM を選択）</option>' );\n        for( var i = 0; i < result.result.length; i ++ ){\n          var model = result.result[i];\n          if( model.object == 'model' /* && model.owned_by == 'openai' */ ){\n            if( model.id == 'gpt-4o-mini' ){\n              $('#models').append( '<option value=\"' + model.id + '\" selected>' + model.id + '</option>' );\n            }else{\n              $('#models').append( '<option value=\"' + model.id + '\">' + model.id + '</option>' );\n            }\n          }\n        }\n      }\n\n      busy_lib.remove();\n      busy_lib = null;\n    },\n    error: function( e ){\n      console.log( {e} );\n      busy_lib.remove();\n      busy_lib = null;\n    }\n  });\n});\n\nfunction api(){\n  var text = $(\"#tweet\").val();\n  var model = $(\"#models\").val();\n  var $file = $('#file');\n\n  //console.log({text});\n  if( text || ( $file.prop( 'files' ) && $file.prop( 'files' )[0] ) ){\n    $('#tweet').val( '' );\n\n    busy_lib = getBusyOverlay( document.body,\n      {color:'black', opacity:0.5, text:'loading',style:'text-decoration:blink;font-weight:bold;font-size:12px;color:white'},\n      {color:'#fff',size:128, type:'o'}\n    );\n\n    var data = new FormData();\n    data.append( 'prompt', text );\n    data.append( 'model', model );\n    if( $file.prop( 'files' ) && $file.prop( 'files' )[0] ){\n      //. ファイルが指定されていたら送信データに加える\n      data.append( 'file', $file.prop( 'files' )[0] );\n    }\n    //console.log( {data} );\n  \n    $.ajax({\n      type: 'POST',\n      url: '/aiedu_file',\n      data: data,\n      cache: false,\n      contentType: false,\n      processData: false,\n      success: function( result ){\n        console.log( {result} );\n        if( typeof result == 'string' ) result = JSON.parse( result );\n        if( result && result.status && result.result && result.result.choices ){\n          var result_text = result.result.choices[0].message.content;\n          result_text = result_text.split( \"\\n\" ).join( \"<br/>\" );\n          var div = document.createElement(\"div\");\n          div.innerHTML = '' +\n            ' <div class=\"col-1\">' +\n            ' </div>' +\n            ' <div class=\"col-1\">' +\n            ' <i class=\"fas fa-robot fa-3x\"></i>' +\n            ' </div>' +\n            ' <div class=\"col-9\">' +\n            ' <div class=\"alert alert-info\" style=\"width:90%\">' +\n            result_text +\n            ' </div>' +\n            ' </div>' +  \n            ' <div class=\"col-1\">' +\n            ' <!-- margin:padding -->' +\n            ' </div>';\n          div.setAttribute(\"class\", \"row\");\n          document.getElementById(\"field\").appendChild(div);\n  \n          //voiceOutput( result1.text );\n        }\n        busy_lib.remove();\n        busy_lib = null;\n      },\n      error: function( e1 ){\n        console.log( {e1} );\n        busy_lib.remove();\n        busy_lib = null;\n      }\n    });\n  }\n}\n\nfunction submitMessage(){\n  var text = $(\"#tweet\").val();\n  \n  var div = document.createElement(\"div\");\n  div.innerHTML = '' +\n  '      <div class=\"col-1\">' +\n  '        <!-- margin:padding -->' +\n  '      </div>' +\n  '      <div class=\"col-10 media tweet\">' +\n  '        <div class=\"media-body\">' +\n  '          <div class=\"alert alert-success\">' +\n  document.getElementById(\"tweet\").value +\n  '          </div>' +\n  '        </div>' +\n  '        <div class=\"media-right\">' +\n  '        <i class=\"fas fa-user fa-3x\"></i>' +\n  '        </div>' +\n  '      </div>' +\n  '      <div class=\"col-1\">' +\n  '        <!-- margin:padding -->' +\n  '      </div>';\n  div.setAttribute(\"class\", \"row\");\n  document.getElementById(\"field\").appendChild(div);\n\n  /*強制スクロール*/\n  var h = window.parent.screen.height;\n  scrollTo(0, h);\n\n  /*APIで呼び出す相手の返事*/\n  window.setTimeout( api, 800 );\n}\n\n//. 音声入力\nvar flag_speech = 0;\nfunction voiceInput(){\n  window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;\n  var recognition = new SpeechRecognition(); //webkitSpeechRecognition();\n  recognition.lang = 'ja';\n  recognition.interimResults = true;\n  recognition.continuous = true;\n\n  recognition.onsoundstart = function(){\n    console.log( '認識中' );\n  };\n  recognition.onnomatch = function(){\n    console.log( 'もう一度試してください' );\n  };\n  recognition.onerror = function(){\n    console.log( 'エラー' );\n  };\n  recognition.onsoundend = function(){\n    console.log( '停止中' );\n    //voiceInput();  //. 認識後も音声入力を続ける場合\n  };\n\n  recognition.onresult = function( event ){\n    var results = event.results;\n    for( var i = event.resultIndex; i < results.length; i++ ){\n      if( results[i].isFinal ){\n        var text = results[i][0].transcript;\n        $('#tweet').val( text );\n        //voiceInput();  //. 認識後も音声入力を続ける場合\n        recognition.stop();\n      }else{\n        $('#tweet').val( results[i][0].transcript );\n        flag_speech = 1;\n      }\n    }\n  }\n\n  flag_speech = 0;\n  console.log( \"start\" );\n  recognition.start();\n}\n\n//. 音声出力\nfunction voiceOutput( text, lang ){\n  if( 'speechSynthesis' in window ){\n    var voices = window.speechSynthesis.getVoices();\n    if( !lang ){ lang = 'ja-JP'; }\n\n    uttr = new SpeechSynthesisUtterance();\n    uttr.text = text;\n    uttr.lang = lang;\n\n    window.speechSynthesis.speak( uttr );\n    uttr.onend = speechEnd;\n  }else{\n    alert( 'このブラウザは Web Speech API に未対応です。')\n  }\n}\n</script>\n</head>\n<body>\n\n<nav class=\"navbar navbar-expand-lg navbar-dark bg-dark\">\n  <div class=\"container\">\n    <a class=\"navbar-brand\" href=\"#\">OpenAI Chat(with File)</a>\n    <ul class=\"navbar-nav mr-auto\">\n    </ul>\n\n    <!-- 右寄 -->\n    <ul class=\"navbar-nav ml-auto\">\n      <li class=\"nav-item\">\n        <select id=\"models\" class=\"form-control\"></select>\n      </li>\n    </ul>\n  </div>\n</nav>\n\n\n<div class=\"container\">\n  <div class=\"row\">\n    <div class=\"col-2\">\n    <!-- margin:padding -->\n    </div>\n    <div class=\"col-8 input-group mb-3\">\n      <div class=\"input-group-prepend\">\n        <button onClick=\"voiceInput();\" id=\"voice_btn\" type=\"button\" class=\"btn btn-outline-secondary\"><i class=\"fas fa-microphone\"></i></button>\n      </div>\n      <input id=\"tweet\" type=\"text\" class=\"form-control\" placeholder=\"入力テキスト\" value=\"今日はいい天気ですね\"/>\n      <input id=\"file\" type=\"file\" class=\"form-control\"/>\n      <div class=\"input-group-append\">\n        <button onClick=\"submitMessage();\" id=\"send_btn\" type=\"button\" class=\"btn btn-primary\">送信</button>\n      </div>\n    </div>\n    <div class=\"col-2\">\n    <!-- margin:padding -->\n    </div>\n  </div>\n</div>\n\n<!-- main board -->\n<div class=\"container main-board\" style=\"font-size: 1.25em;\" id=\"field\">\n  <!-- dummy B :: other board -->\n  <div class=\"row\" >\n    <div class=\"col-1\">\n      <!-- margin:padding -->\n    </div>\n    <div class=\"col-10 media\">\n      <div class=\"media-left\">\n        <i class=\"fas fa-robot fa-3x\"></i>\n      </div>\n      <div class=\"media-body\">\n        <div class=\"alert alert-info\">\n          質問・指示を入力してください。ファイルを添付する場合はそのファイルに関する質問・指示を入力できます。\n        </div>\n      </div>\n    </div>\n    <div class=\"col-1\">\n    <!-- margin:padding -->\n    </div>\n  </div>\n</div>\n\n</body>\n</html>\n",
+        "output": "str",
+        "x": 230,
+        "y": 60,
+        "wires": [
+            [
+                "58a22a8e5ac7294b"
+            ]
+        ]
+    },
+    {
+        "id": "58a22a8e5ac7294b",
+        "type": "http response",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 350,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "6de19b4954c651b5",
+        "type": "http in",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "url": "/aiedu_file",
+        "method": "post",
+        "upload": true,
+        "swaggerDoc": "",
+        "x": 120,
+        "y": 120,
+        "wires": [
+            [
+                "ca2f969d9b578fa5",
+                "b152a7922796e9b0"
+            ]
+        ]
+    },
+    {
+        "id": "8a1773e037aa65a0",
+        "type": "http response",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 430,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "b152a7922796e9b0",
+        "type": "debug",
+        "z": "4b38c7258b013aa3",
+        "name": "debug 6",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 380,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "ca2f969d9b578fa5",
+        "type": "http request",
+        "z": "4b38c7258b013aa3",
+        "name": "問い合わせ",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://aiedu.xxxxxxxxxxxxxx.jp-tok.codeengine.appdomain.cloud/api/file",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "Content-Type",
+                "valueType": "other",
+                "valueValue": "application/json"
+            },
+            {
+                "keyType": "other",
+                "keyValue": "Authorization",
+                "valueType": "msg",
+                "valueValue": "bearer"
+            },
+            {
+                "keyType": "other",
+                "keyValue": "Accept",
+                "valueType": "other",
+                "valueValue": "application/json"
+            }
+        ],
+        "x": 290,
+        "y": 120,
+        "wires": [
+            [
+                "8a1773e037aa65a0",
+                "b152a7922796e9b0"
+            ]
+        ]
+    },
+    {
+        "id": "47db1a0a2fc2f798",
+        "type": "http in",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "url": "/aiedu_models",
+        "method": "get",
+        "upload": true,
+        "swaggerDoc": "",
+        "x": 130,
+        "y": 240,
+        "wires": [
+            [
+                "f7a873959d2e7932"
+            ]
+        ]
+    },
+    {
+        "id": "f7a873959d2e7932",
+        "type": "http request",
+        "z": "4b38c7258b013aa3",
+        "name": "問い合わせ",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://aiedu.xxxxxxxxxxxxxx.jp-tok.codeengine.appdomain.cloud/api/models",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "Content-Type",
+                "valueType": "other",
+                "valueValue": "application/json"
+            },
+            {
+                "keyType": "other",
+                "keyValue": "Authorization",
+                "valueType": "msg",
+                "valueValue": "bearer"
+            },
+            {
+                "keyType": "other",
+                "keyValue": "Accept",
+                "valueType": "other",
+                "valueValue": "application/json"
+            }
+        ],
+        "x": 310,
+        "y": 240,
+        "wires": [
+            [
+                "b826a7a4fe62c30b",
+                "b152a7922796e9b0"
+            ]
+        ]
+    },
+    {
+        "id": "b826a7a4fe62c30b",
+        "type": "http response",
+        "z": "4b38c7258b013aa3",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 450,
+        "y": 240,
+        "wires": []
+    }
+]
