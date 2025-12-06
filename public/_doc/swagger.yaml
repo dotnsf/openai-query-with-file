@@ -73,7 +73,7 @@ paths:
         - name: file
           in: formData
           type: file
-          description: ファイル(.xls, .xlsx, .csv, .tsv)
+          description: ファイル(.xls, .xlsx, .csv, .tsv, .txt)
         - name: model
           in: formData
           type: string

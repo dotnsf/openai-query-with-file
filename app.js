@@ -155,6 +155,7 @@ app.post( '/api/file', async function( req, res ){
       break;
     case 'csv':
     case 'tsv':
+    case 'txt':
       //. ファイル読み込み（Shift_JIS ファイルは変換する）
       var buffer = fs.readFileSync( path );
       var file_text = buffer.toString();
